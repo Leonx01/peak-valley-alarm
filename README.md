@@ -10,6 +10,12 @@
 - 播放 **WebAudio 生成的国风提示音**（谷=清脆双音磬，峰=三音锣，无需任何音频文件）
 - 发送**浏览器系统通知**（未授权时 toast 内提供「开启系统通知」按钮，一次点击授权）
 
+页面右下角还有一个**常驻余额角标**：
+
+- 展示当前所用 **DeepSeek API 的剩余金额**（通过宿主代理查询官方余额接口，API Key 只在宿主侧解析，不会进入浏览器）
+- 展示**当前输入 / 输出 token 单价**（按当前峰/谷时段自动取对应价格）
+- 点击角标立即刷新余额；默认每小时自动刷新一次
+
 ## 界面效果
 
 暗色主题（默认）：
@@ -24,8 +30,15 @@
 
 | 切换 | 通知标题 | 正文 |
 | --- | --- | --- |
-| → 低谷（12:00 / 18:00） | 低谷时段开始 · 半价！ | 现在跑任务半价优惠，冲！距高峰还有 X 小时 X 分 |
-| → 高峰（09:00 / 14:00） | 高峰时段开始 · 恢复原价 | 价格已恢复 ×2.00，省钱请等下一个低谷（HH:MM 开始） |
+| → 低谷（12:00 / 18:00） | 低谷时段开始 | 当前价 · 输入 $0.22 · 输出 $0.66 / 百万 token |
+| → 高峰（09:00 / 14:00） | 高峰时段开始 | 当前价 · 输入 $0.44 · 输出 $1.32 / 百万 token |
+
+toast 与通知里的价格文案只展示**当前输入 / 输出 token 单价**（按当前峰/谷时段取价，峰时 = 谷时 × 2），不再包含峰谷计价、北京时间、倍率、半价等描述。示例价格基于官方当前价目（2026-08-16 起峰谷计价，美元 / 百万 token），可在 `prices` 配置中覆盖。
+
+## 余额与价格
+
+- **余额**：宿主半部注册 `/peak-valley-alarm/balance` 路由，通过 `ctx.credentials` 凭据服务解析 `apiKeyEnv`（默认 `DEEPSEEK_API_KEY`，与 dsh-llm-deepseek 同一链路；未挂载凭据服务时回退到进程环境变量），再请求 `https://api.deepseek.com/user/balance`。客户端同源拉取，密钥永不进入浏览器。未配置密钥时角标显示「未配置」。
+- **价格**：默认值为 DeepSeek 官方谷时价（`inputCacheMiss` / `inputCacheHit` / `output`，美元每百万 token），`peakMultiplier` 用于峰时取价（默认 2）。当前显示的价格随峰/谷时段实时切换。
 
 ## 时段规则（北京时间）
 
@@ -45,6 +58,15 @@ profile 的 `cordis.patch.yml` 配置示例：
         notify: true      # 系统通知开关
         toastSeconds: 8   # toast 停留秒数
         demo: false       # 设为 true：加载 4 秒后模拟一次「低谷开始」提醒，方便预览
+        balance: true     # 右下角余额/价格角标开关
+        balanceRefreshMinutes: 60   # 余额自动刷新间隔（分钟），点击角标可立即刷新
+        apiKeyEnv: DEEPSEEK_API_KEY # 宿主侧解析余额所用的凭据引用（env 名）
+        prices:           # 官方谷时价（美元/百万 token），峰时自动 × peakMultiplier
+          inputCacheMiss: 0.22   # 输入（未命中缓存）
+          inputCacheHit: 0.007   # 输入（命中缓存）
+          output: 0.66           # 输出
+          peakMultiplier: 2      # 峰时倍数
+          currency: '$'          # 价格货币符号
 ```
 
 注意：patch 会**整体替换**该行的 `config`，修改时需完整重写所有键。
@@ -66,8 +88,8 @@ dsh plugin --profile web add file:D:/path/to/peak-valley-alarm
 
 | 文件 | 说明 |
 | --- | --- |
-| `lib/index.js` | 宿主半部（保证插件行正常组合，无业务逻辑） |
-| `lib/client.js` | 已构建的客户端 bundle（`window.__ModuleLoader__.load` 惰性 CJS 格式），注册 `shell.overlay` 列表槽位 |
+| `lib/index.js` | 宿主半部：注册 `/peak-valley-alarm/balance` 余额代理路由（凭据解析 + 官方余额接口转发，密钥不出宿主） |
+| `lib/client.js` | 已构建的客户端 bundle（`window.__ModuleLoader__.load` 惰性 CJS 格式），注册 `shell.overlay` 列表槽位（切换 toast + 余额/价格角标） |
 | `package.json` | `dsh.client.platform: "web"` 声明客户端半部 |
 | `docs/preview.html` | 独立预览页（模拟 DSH Web 明暗界面），用于生成 README 截图 |
 | `scripts/generate-preview.js` | 从 `lib/client.js` 抽取插件 CSS 注入预览页，保证截图与发布版本一致 |
