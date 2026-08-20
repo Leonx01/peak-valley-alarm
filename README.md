@@ -10,7 +10,7 @@
 - 播放 **WebAudio 生成的国风提示音**（谷=清脆双音磬，峰=三音锣，无需任何音频文件）
 - 发送**浏览器系统通知**（未授权时 toast 内提供「开启系统通知」按钮，一次点击授权）
 
-toast 与通知里还会显示当前所用 **DeepSeek API 的剩余金额**（通过宿主代理查询官方余额接口，API Key 只在宿主侧解析，不会进入浏览器；每次提醒时刷新，平时每小时自动刷新一次）。
+toast 与通知里还会显示**当前输入 / 输出 token 单价**（按提醒发生时的峰/谷时段取价）。**DeepSeek API 剩余余额**常驻显示在 [peak-valley-ticker](https://github.com/Leonx01/peak-valley-ticker) 行情条中。
 
 ## 界面效果
 
@@ -26,15 +26,14 @@ toast 与通知里还会显示当前所用 **DeepSeek API 的剩余金额**（�
 
 | 切换 | 通知标题 | 正文 |
 | --- | --- | --- |
-| → 低谷（12:00 / 18:00） | 低谷时段开始 | 输入 $0.22 · 输出 $0.66 / 百万 token · 余额 ¥30.71 |
-| → 高峰（09:00 / 14:00） | 高峰时段开始 | 输入 $0.44 · 输出 $1.32 / 百万 token · 余额 ¥30.71 |
+| → 低谷（12:00 / 18:00） | 低谷时段开始 | 输入 $0.22 · 输出 $0.66 / 百万 token |
+| → 高峰（09:00 / 14:00） | 高峰时段开始 | 输入 $0.44 · 输出 $1.32 / 百万 token |
 
-toast 与通知里的文案只展示**当前输入 / 输出 token 单价**（按当前峰/谷时段取价，峰时 = 谷时 × 2）和**当前余额**，不再包含峰谷计价、北京时间、倍率、半价等描述。示例价格基于官方当前价目（2026-08-16 起峰谷计价，美元 / 百万 token），可在 `prices` 配置中覆盖；余额示例仅用于示意。
+toast 与通知里的文案只展示**当前输入 / 输出 token 单价**（按当前峰/谷时段取价，峰时 = 谷时 × 2），不再包含峰谷计价、北京时间、倍率、半价等描述。示例价格基于官方当前价目（2026-08-16 起峰谷计价，美元 / 百万 token），可在 `prices` 配置中覆盖。
 
-## 余额与价格
+## 价格
 
-- **余额**：宿主半部注册 `/peak-valley-alarm/balance` 路由，通过 `ctx.credentials` 凭据服务解析 `apiKeyEnv`（默认 `DEEPSEEK_API_KEY`，与 dsh-llm-deepseek 同一链路；未挂载凭据服务时回退到进程环境变量），再请求 `https://api.deepseek.com/user/balance`。客户端同源拉取，密钥永不进入浏览器。未配置密钥时 toast 内显示「未配置」。
-- **价格**：默认值为 DeepSeek 官方谷时价（`inputCacheMiss` / `inputCacheHit` / `output`，美元每百万 token），`peakMultiplier` 用于峰时取价（默认 2）。当前显示的价格按提醒发生时的峰/谷时段取价。
+默认值为 DeepSeek 官方谷时价（`inputCacheMiss` / `inputCacheHit` / `output`，美元每百万 token），`peakMultiplier` 用于峰时取价（默认 2）。当前显示的价格按提醒发生时的峰/谷时段取价。
 
 ## 时段规则（北京时间）
 
@@ -54,9 +53,6 @@ profile 的 `cordis.patch.yml` 配置示例：
         notify: true      # 系统通知开关
         toastSeconds: 8   # toast 停留秒数
         demo: false       # 设为 true：加载 4 秒后模拟一次「低谷开始」提醒，方便预览
-        balance: true     # toast 中显示余额行开关
-        balanceRefreshMinutes: 60   # 余额自动刷新间隔（分钟），每次提醒时也会刷新
-        apiKeyEnv: DEEPSEEK_API_KEY # 宿主侧解析余额所用的凭据引用（env 名）
         prices:           # 官方谷时价（美元/百万 token），峰时自动 × peakMultiplier
           inputCacheMiss: 0.22   # 输入（未命中缓存）
           inputCacheHit: 0.007   # 输入（命中缓存）
