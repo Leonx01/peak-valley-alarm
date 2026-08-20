@@ -1,7 +1,7 @@
 {
   "name": "peak-valley-alarm",
-  "version": "0.1.0",
-  "description": "省钱闹钟：DeepSeek 峰谷计价低谷/高峰切换时，浏览器通知 + 国风提示音 + 页内 toast（北京时间）",
+  "version": "0.2.0",
+  "description": "省钱闹钟：DeepSeek 峰谷计价低谷/高峰切换时，浏览器通知 + 国风提示音 + 页内 toast；右下角常驻角标展示 API 剩余余额与当前输入/输出 token 单价",
   "type": "module",
   "main": "lib/index.js",
   "exports": {
